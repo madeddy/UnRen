@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 
 """
-This is a helper app for "UnRen" to collect, pack and embed diff. module files
+This is a helper app for "UnRen" to collect, pack and embed different module files
 into the main script.
 
-Requirements: py 3.6
+Requirements: py 3.6+
 Step 1:
-Reads the content of few RenPy script files and stores it temporary. Now are the
+Reads the content of RenPy script files and stores it temporary. Now are the
 tool files collected by a dir walker, filepath and data are collected as pairs in
-a dict. The dict is then pickled (#1), base85 encoded (#2) and also stored.
+a dict. The dict is pickled (#1), base64 encoded (#2) and also stored.
 
 The different data streams are now embedded in prepaired placeholder locations in
 the main script.
-#1 to get the bytestream the encoder func wants
-#2 A compress. algorythm like zip outputs a codestream which confuses python(breaks)
+#1 The encoder func needs `bytes-like`
+#2 Output of compression algorythms would confuse python(error).
 
 Step 2:
 Embeds the previously prepaired python script into a Win command file.
@@ -24,7 +24,7 @@ __title__ = 'UnRen builder'
 __license__ = 'Apache-2'
 __author__ = 'madeddy'
 __status__ = 'Development'
-__version__ = '0.13.0-alpha'
+__version__ = '0.13.1-alpha'
 
 
 import os
@@ -178,7 +178,7 @@ def parse_args():
                         help="Execute step 2: embeds the Python script into the cmd.")
     aps.add_argument('--version',
                      action='version',
-                     version=f'%(prog)s : { __title__} {__version__}')
+                     version=f"%(prog)s : { __title__} {__version__}")
     args = aps.parse_args()
     valid_switch()
     return args
