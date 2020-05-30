@@ -1,7 +1,10 @@
 1>2# : ^
 """
 @echo off
-setlocal enabledelayedexpansion
+rem Name:     UnRen.cmd
+rem Purpose:  One clock tool wrapper for the work on game engine files
+rem Author:   github/madeddy
+rem Revision: March 2020 - initial version
 
 echo Here is much space for endless speeches
 echo Or not...
@@ -9,71 +12,91 @@ echo Or not...
 
 
 
-
-set version=version=0.12.0-alpha
+rem config
+rem --------------------------------------------------------------------------------
+setlocal enabledelayedexpansion
+set "version=0.12.1-alpha"
 title "UnRen for Windows v%version%"
 mode con: cols=90 lines=50
+rem set "PYTHONIOENCODING=UTF-8"
+set "base_pth=%~dp0"
 
-REM path check
-REM --------------------------------------------------------------------------------
+
+rem path check
+rem --------------------------------------------------------------------------------
 :path_check
-REM lets assume the ideal (script sits in the games base-dir)
-set base_pth=%~dp0
-
+rem lets assume the ideal (script sits in the games base-dir)
 if exist "game" if exist "lib" if exist "renpy" (
 	goto :py_check
 )
-REM or if one below we shorten the path
+
+rem or if one below we shorten the path
 if exist "..\game" if exist "..\lib" if exist "..\renpy" (
     for %%X in ("%base_pth:~0,-1%") do set base_pth=%%~dpX
 	goto :py_check
-)
-
-echo    ! Error: The location of UnRen appears to be wrong. It should
-echo             be in the game's base directory.
-echo             (dirs 'game', 'lib', 'renpy' are present)
-echo/
-goto :error
+) else goto :err_path
 
 
-REM py check
-REM --------------------------------------------------------------------------------
+rem py check
+rem --------------------------------------------------------------------------------
 :py_check
-set python_pth="%base_pth%lib\windows-i686\"
-REM Future: On Renpy 8 (py3) we will have 64bit support for win
-REM if "%PROCESSOR_ARCHITECTURE%" EQU "AMD64" (
-REM     set "python_pth=%base_pth%lib\windows-x86_64\"
-REM ) else (
-REM     set "python_pth=%base_pth%lib\windows-i686\"
-REM )
+set "python_pth=%base_pth%lib\windows-i686\"
+set "pyexe=%python_pth%python.exe"
+
+rem Future: On Renpy 8 (py3) we will have 64bit support for win
+rem if "%processor_architecture%" equ "AMD64" (
+rem     set "python_pth=%base_pth%lib\windows-x86_64\"
+rem ) else (
+rem     set "python_pth=%base_pth%lib\windows-i686\"
+rem )
 
 if not exist "%python_pth%python.exe" (
-	echo    ! Error: Cannot locate python.exe, unable to continue.
-	echo             Is the correct python version for your computer in 
-    echo             the "%base_pth%lib" directory?
-	echo/
-	goto :error
+	goto :err_py
 )
-
 goto :run_py
 
 
-REM It got awry
-REM --------------------------------------------------------------------------------
-:error
+rem Script in wrong location error
+rem --------------------------------------------------------------------------------
+:err_path
+echo    ! Error: The location of UnRen appears to be wrong. It should
+echo             be in the game's root directory.
+echo             (dirs 'game', 'lib', 'renpy' are present)
+echo/
+goto :term
+
+
+rem Missing python error
+rem --------------------------------------------------------------------------------
+:err_py
+echo    ! Error: Cannot locate python.exe, unable to continue.
+echo             Check in directory "%python_pth%" for the executable.
+echo/
+goto :term
+
+
+rem Bad end after error
+rem --------------------------------------------------------------------------------
+:term
 echo/
 echo    Terminating.
-echo    If a reason was stated, correct the problem. If not check path
-echo    and script for possible issues.
+echo    If a reason was stated try to correct the problem, if not try to
+echo    check path and script for possible issues.
 echo/
 pause>nul|set/p=.            Press any key to exit...
 exit 1
 
 
-REM Kingdom of python --- lets go
-REM --------------------------------------------------------------------------------
+:end
+endlocal
+echo on
+exit /b 0
+
+
+rem Kingdom of python --- lets go
+rem --------------------------------------------------------------------------------
 :run_py
-REM Works in 7
-"%python_pth%python.exe" -xEO "%~f0" %* & exit /b !errorlevel!
+rem Works in 7 exit /b !errorlevel!
+"%python_pth%python.exe" -xEO "%~f0" %* & goto :end
 """
 batch_placeholder
