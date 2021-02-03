@@ -3,37 +3,45 @@
 """
 RPAKit is a small app which searches in a given path(if not file) RenPy archives
 and decompresses the content in a custom-made subdirectory. Just listing without
-writing or testing & identifying the archiv is also possible.
+writing or testing & identifying the archiv or simulating the expand process is
+also possible.
 """
 
-# pylint:disable=c0301, c0116, w0511, w0612, r0902, r0903
+# TODO: shutil is a nightmare; perhaps write own move functionality
+# TODO: Add functionality to force rpa format version from user input
 
 import os
 import sys
 import argparse
 from pathlib import Path as pt
+import tempfile
+import shutil
 import pickle
 import zlib
 import textwrap
+if sys.platform.startswith('win32'):
+    from colorama import init
+    init(autoreset=True)
 
 
 __title__ = 'RPA Kit'
-__license__ = 'GPLv3'
+__license__ = 'Apache 2.0'
 __author__ = 'madeddy'
 __status__ = 'Development'
-__version__ = '0.25.0-alpha'
+__version__ = '0.37.0-alpha'
 
 
-class RKC:
+class RkCommon:
     """
-    "Rpa Kit Common" is the base class which provides some shared methods and
-    variables for the child classes.
+    "Rpa Kit Common" provides some shared methods and variables for the other
+    classes.
     """
     name = "RpaKit"
     verbosity = 1
+    outdir = 'rpakit_out'
     count = {'dep_found': 0, 'dep_done': 0, 'fle_total': 0}
+    rk_tmp_dir = None
     out_pt = None
-
 
     def __str__(self):
         return f"{self.__class__.__name__}({self.name!r})"
@@ -51,8 +59,8 @@ class RKC:
     @classmethod
     def inf(cls, inf_level, msg, m_sort=None):
         """Outputs by the current verboseness level allowed infos."""
-        if cls.verbosity >= inf_level:  # self.tty ?
-            ind1 = f"{cls.name}: > "
+        if cls.verbosity >= inf_level:  # TODO: use self.tty ?
+            ind1 = f"{cls.name}:\x1b[32m >> \x1b[0m"
             ind2 = " " * 12
             if m_sort == 'note':
                 ind1 = f"{cls.name}:\x1b[93m NOTE \x1b[0m> "
@@ -66,18 +74,28 @@ class RKC:
             print(textwrap.fill(msg, width=90, initial_indent=ind1, subsequent_indent=ind2))
 
     @classmethod
+    def void_dir(cls, dst):
+        """Checks if given directory has content."""
+        return not any(dst.iterdir())
+
+    @classmethod
     def make_dirstruct(cls, dst):
         """Constructs any needet output directorys if they not already exist."""
-        if not pt(dst).exists():
+        if not dst.exists():
             cls.inf(2, f"Creating directory structure for: {dst}")
-            pt(dst).mkdir(parents=True, exist_ok=True)
+            dst.mkdir(parents=True, exist_ok=True)
+
+    @classmethod
+    def telltale(cls, fraction, total, obj):
+        """Returns a percentage-meter like output for use in tty."""
+        return f"[\x1b[44m{fraction / float(total):05.1%}\x1b[0m] {cls.strify(obj):>4}"
 
 
-class RPAPathwork(RKC):
+class RkPathWork(RkCommon):
     """
-    Support class for RPA Kit's path related preparation. Needet inputs
-    (file-/dir path) are internaly providet. If input is a dir it searches
-    there for archives, checks and filters them and puts them in a list.
+    Support class for RPA Kit's path related tasks. Needet inputs (file-/dir path)
+    are internaly providet. If input is a dir it searches there for archives,
+    checks and filters them and puts them in a list.
     A archiv as input skips the search part.
     """
 
@@ -86,83 +104,107 @@ class RPAPathwork(RKC):
         self.dep_lst = []
         self._inp_pt = None
         self.raw_inp = None
-        self.outdir = None
+        self.task = None
+
+    def cleanup(self):
+        """Removes temporary content and in simulate mode also the outdir."""
+
+        if self.task == 'exp':
+            # NOTE: Converting 'src' to str to avoid bugs.python.org/issue32689
+            # fixed in py 3.9; if its standard we use pathlikes as source
+            # FIXME: move does error if src exists in dst; how?
+            for entry in self.rk_tmp_dir.iterdir():
+                # src = (entry).relative_to(self.rk_tmp_dir)
+                shutil.move(self.strify(entry), self.out_pt)
+
+        # TODO: write code to check output
+        else:
+            self.out_pt.rmdir()
+
+        if self.void_dir(self.rk_tmp_dir):
+            self.rk_tmp_dir.rmdir()
+        else:
+            shutil.rmtree(self.rk_tmp_dir)
 
     def make_output(self):
         """Constructs outdir and outpath."""
-        # TODO: move outdir to cls arg
-        if self.outdir is None:
-            self.outdir = 'rpakit_out'
-        self.out_pt = pt(self._inp_pt) /  self.outdir
+        self.out_pt = self._inp_pt / self.outdir
+        if self.out_pt.exists() and not self.void_dir(self.out_pt):
+            # self.out_pt = self.rk_tmp_dir / self.outdir
+            # if self._inp_pt.joinpath(self.outdir).exists():
+            self.inf(0, f"The output directory > {self.out_pt} exists already "
+                     "and is'nt empty. Rename or remove it.", m_sort='warn')
+            self.cleanup()
         self.make_dirstruct(self.out_pt)
 
     def ident_paired_depot(self):
         """Identifys rpa1 type paired archives and removes one from the list."""
         lst_copy = self.dep_lst
         for entry in list(lst_copy):
-            if pt(entry).suffix == '.rpi':
-                twin = str(pt(entry).with_suffix('.rpa'))
+            if entry.suffix == '.rpi':
+                twin = str(entry.with_suffix('.rpa'))
                 if twin in self.dep_lst:
                     self.dep_lst.remove(twin)
-                    RKC.count['dep_found'] -= 1
+                    RkCommon.count['dep_found'] -= 1
 
     @staticmethod
     def valid_archives(entry):
         """Checks path objects for identity by extension. RPA have no real magic num."""
-        return bool(pt(entry).is_file() and pt(entry).suffix
-                    in ['.rpa', '.rpi', '.rpc'])
+        return bool(entry.is_file() and entry.suffix in ['.rpa', '.rpi', '.rpc'])
 
     def add_depot(self, depot):
         """Adds by extension as RPA identified files to the depot list."""
         if self.valid_archives(depot):
             self.dep_lst.append(depot)
-            RKC.count['dep_found'] += 1
+            RkCommon.count['dep_found'] += 1
 
     def search_rpa(self):
         """Searches dir and calls another method which identifys RPA files."""
         for entry in os.scandir(self._inp_pt):
-            self.add_depot(entry.path)
+            entry_pth = pt(entry.path)
+            self.add_depot(entry_pth)
 
-    def transf_winpt(self):
-        """Check if sys is WinOS and if inp is a win-path. Returns as posix."""
-        if sys.platform.startswith('win32') and '\\' in self.raw_inp:
-            self.inf(2, "The input appears to be a windows path. It should be" \
-                     "given in posix style to minimize the error risk.", m_sort='note')
-            self.raw_inp = pt(self.raw_inp).as_posix()
+    def check_inpath(self):
+        """Helper to check if given path exist."""
+        if not self.raw_inp.exists() or self.raw_inp.is_symlink():
+            raise FileNotFoundError(f"Could the given path object ({self.raw_inp})"
+                                    "not find! Check the given input.")
+        self.raw_inp = self.raw_inp.resolve(strict=True)
 
     def pathworker(self):
         """This prepairs the given path and output dir. It dicovers if the input
         is a file or directory and takes the according actions.
         """
-        self.transf_winpt()
-        self.raw_inp = pt(self.raw_inp).resolve(strict=True)
+        self.check_inpath()
 
         try:
-            if pt(self.raw_inp).is_dir():
+            if self.raw_inp.is_dir():
                 self._inp_pt = self.raw_inp
                 self.search_rpa()
-            elif pt(self.raw_inp).is_file():
+            elif self.raw_inp.is_file():
                 self.add_depot(self.raw_inp)
-                self._inp_pt = pt(self.raw_inp).parent
+                self._inp_pt = self.raw_inp.parent
             else:
                 raise FileNotFoundError("File not found!")
-        except Exception as err:  # pylint:disable=w0703
+        except Exception as err:
             print(f"{err}: Unexpected error from the given target path. \n{sys.exc_info()}")
-
-        self.make_output()
         self.ident_paired_depot()
 
-        if RKC.count['dep_found'] > 0:
-            self.inf(1, f"{RKC.count['dep_found']} RPA files to process:\n"
+        if self.task in ['exp', 'sim']:
+            self.rk_tmp_dir = pt(tempfile.mkdtemp(prefix='RpaKit.', suffix='.tmp'))
+            self.make_output()
+
+        if RkCommon.count['dep_found'] > 0:
+            self.inf(1, f"{RkCommon.count['dep_found']} RPA files to process:\n"
                      f"{chr(10).join([*map(str, self.dep_lst)])}", m_sort='raw')
         else:
             self.inf(1, "No RPA files found. Was the correct path given?")
 
 
-class RPAKit(RKC):
+class RkDepotWork(RkCommon):
     """
-    The class for analyzing and unpacking RPA files. All needet inputs
-    (depot, output path) are internaly providet.
+    The class for analyzing, testing and unpacking RPA files. All needet
+    inputs (depot, output path) are internaly providet.
     """
 
     _rpaformats = {'x': {'rpaid': 'rpa1',
@@ -218,19 +260,19 @@ class RPAKit(RKC):
         self._reg.clear()
         self.dep_initstate = None
 
-    def extract_data(self, file_pt, file_data):
+    def extract_data(self, file_pt, pos_stats):
         """Extracts the archive data to a temp file."""
-        if pt(self.depot).suffix == '.rpi':
-            self.depot = pt(self.depot).with_suffix('.rpa')
+        if self.depot.suffix == '.rpi':
+            self.depot = self.depot.with_suffix('.rpa')
 
-        with pt(self.depot).open('rb') as ofi:
+        with self.depot.open('rb') as ofi:
             if len(self._reg[file_pt]) == 1:
-                ofs, leg, pre = file_data[0]
+                ofs, leg, pre = pos_stats[0]
                 ofi.seek(ofs)
                 tmp_file = pre + ofi.read(leg - len(pre))
             else:
                 part = []
-                for ofs, leg, pre in file_data:
+                for ofs, leg, pre in pos_stats:
                     ofi.seek(ofs)
                     part.append(ofi.read(leg))
                     tmp_file = pre.join(part)
@@ -252,7 +294,7 @@ class RPAKit(RKC):
 
     def get_cipher(self):
         """Fetches the cipher for the register from the header infos."""
-        # NOTE: Slicing is error prone; perhaps use of "split to parts" as a fallback
+        # NOTE: Slicing is error prone; perhaps use of "split parts" as a fallback
         # in the excepts is useful or even reverse the order of both
         offset, key = 0, None
         try:
@@ -263,17 +305,17 @@ class RPAKit(RKC):
                     key = int(self._header[slky], 16)
         except (LookupError, ValueError) as err:
             print(sys.exc_info())
-            raise f"{err}: Problem with the format data encountered. Perhabs " \
-                    "the RPA is malformed."
+            raise f"{err}: Problem with the format data encountered. Perhaps " \
+                "the RPA is malformed."
         except TypeError as err:
             raise f"{err}: Somehow the wrong data types had a meeting in here. " \
-                    "They did'n like each other."
+                "They did'n like each other."
         return offset, key
 
     def collect_register(self):
         """Gets the depot's register through unzip and unpickle."""
         offset, key = self.get_cipher()
-        with pt(self.depot).open('rb') as ofi:
+        with self.depot.open('rb') as ofi:
             ofi.seek(offset)
             self._reg = pickle.loads(zlib.decompress(ofi.read()), encoding='bytes')
 
@@ -304,8 +346,8 @@ class RPAKit(RKC):
             try:
                 magic = self._header[:1].decode()
             except UnicodeError:
-                self.inf(0, "UnicodeError: Header unreadable. Tested file is " \
-                         "perhabs no RPA or very weird.", m_sort='warn')
+                self.inf(0, "UnicodeError: Header unreadable. Tested file is "
+                         "perhaps no RPA or very weird.", m_sort='warn')
                 magic = ''
         return magic
 
@@ -321,7 +363,7 @@ class RPAKit(RKC):
 
             # NOTE:If no version is found the dict is empty; searching with a key
             # slice for 'rpaid' excepts a KeyError (better init dict with key?)
-            if 'rpa1' in self._version.values() and pt(self.depot).suffix != '.rpi':
+            if 'rpa1' in self._version.values() and self.depot.suffix != '.rpi':
                 # self._version = {}
                 self._version.clear()
             elif not self._version:
@@ -330,9 +372,9 @@ class RPAKit(RKC):
                 raise NotImplementedError
 
         except (ValueError, NotImplementedError):
-            self.inf(0, f"{self.depot!r} is not a Ren\'Py archive or a unsupported " \
+            self.inf(0, f"{self.depot!r} is not a Ren\'Py archive or a unsupported "
                      "variation."
-                     f"\nFound archive header: >{self._header}<", m_sort='warn')
+                     f"\nFound archive header: > {self._header}", m_sort='warn')
             self.dep_initstate = False
         except LookupError:
             raise "There was some problem with the key of the archive..."
@@ -341,53 +383,54 @@ class RPAKit(RKC):
 
     def get_header(self):
         """Opens file and reads header line in."""
-        with pt(self.depot).open('rb') as ofi:
+        with self.depot.open('rb') as ofi:
             ofi.seek(0)
             self._header = ofi.readline()
 
     def check_out_pt(self, f_pt):
         """Checks output path and if needet renames file."""
-        tmp_pt = pt(self.out_pt / f_pt)
-        if pt(tmp_pt).is_dir() or f_pt == "":
+        tmp_pt = self.rk_tmp_dir / f_pt
+        # tmp_pt = self.out_pt / f_pt
+        if tmp_pt.is_dir() or f_pt == "":
             rand_fn = '0_' + os.urandom(2).hex() + '.BAD'
-            tmp_pt = pt(self.out_pt / rand_fn)
+            tmp_pt = self.rk_tmp_dir / rand_fn
+            # tmp_pt = self.out_pt / rand_fn
             self.inf(2, f"Possible invalid archive! A filename was replaced with the new name '{rand_fn}'.")
         return tmp_pt
 
     def unpack_depot(self):
         """Manages the unpacking of the depot files."""
-        for file_num, (file_pt, file_data) in enumerate(self._reg.items()):
+        for file_num, (file_pt, pos_stats) in enumerate(self._reg.items()):
             try:
                 tmp_path = self.check_out_pt(file_pt)
-                self.make_dirstruct(pt(tmp_path).parent)
+                self.make_dirstruct(tmp_path.parent)
 
-                tmp_file = self.extract_data(file_pt, file_data)
-                self.inf(2, f"[{file_num / float(RKC.count['fle_total']):05.1%}] " \
-                         f"{file_pt:>4}")
+                tmp_file_data = self.extract_data(file_pt, pos_stats)
+                self.inf(2, f"{self.telltale(file_num, RkCommon.count['fle_total'], file_pt)}")
 
-                with pt(tmp_path).open('wb') as ofi:
-                    ofi.write(tmp_file)
+                with tmp_path.open('wb') as ofi:
+                    ofi.write(tmp_file_data)
             except TypeError as err:
                 raise f"{err}: Unknown error while trying to extract a file."
 
-        if any(pt(self.out_pt).iterdir()):
-            self.inf(2, f"Unpacked {RKC.count['fle_total']} files from archive: " \
-                     f"{self.strify(self.depot)}")
-        else:
+        if self.void_dir(self.out_pt):
             self.inf(2, "No files from archive unpacked.")
+        else:
+            self.inf(2, f"Unpacked {RkCommon.count['fle_total']} files from archive: "
+                     f"{self.strify(self.depot)}")
 
-    def show_depot_content(self):
+    def list_depot_content(self):
         """Lists the file content of a renpy archive without unpacking."""
         self.inf(2, "Listing archive files:")
-        for (_fn, _fidx) in self._reg.items():  # sorted(self._reg.keys()):
+        for (_fn, _fidx) in sorted(self._reg.items()):
             print(f"Filename: {_fn}  Index data: {_fidx}")
-        self.inf(1, f"Archive {self.strify(pt(self.depot).name)} holds " \
+        self.inf(1, f"Archive {self.strify(self.depot.name)} holds "
                  f"{len(self._reg.keys())} files.")
 
     def test_depot(self):
         """Tests archives for their format type and outputs this."""
-        self.inf(0, f"For archive >{pt(self.depot).name}< the identified version " \
-                 f"variant is: {self._version['desc']!r}")
+        self.inf(0, f"For archive > {self.depot.name} the identified version "
+                 f"variant is: \x1b[44m{self._version['desc']!r}\x1b[0m")
 
     def init_depot(self):
         """Initializes depot files to a ready state for further operations."""
@@ -405,106 +448,105 @@ class RPAKit(RKC):
             self.get_version_specs()
             self.collect_register()
             self._reg = {self.utfify(_pt): _d for _pt, _d in self._reg.items()}
-            RKC.count['fle_total'] = len(self._reg)
+            RkCommon.count['fle_total'] = len(self._reg)
 
 
-class RKmain(RPAPathwork, RPAKit):
+class RkMain(RkPathWork, RkDepotWork):
     """
-    Main class to process args and executing the related methods. Args:
-    Positional: {inp} takes `path` or `path + filename.suffix`
-    Keyword: {task=['exp'|'lst'|'tst']} expand/list content of the archiv(s) or test it
-             {outdir=NEWDIR} changes output directory for the archiv content
-             {verbose=[0|1|2]} information output level; defaults to 1
+    Main class to process args and executing the related methods. Parameter:
+    Positional:
+        {inp} takes `path` or `path/filename.suffix`
+    Keyword:
+        {task=['exp'|'lst'|'tst'|'sim']} the intendet request for the app run
+        {outdir=NEWDIR} changes output directory for the archiv content
+        {verbose=[0|1|2]} information output level; defaults to 1
     """
 
     def __init__(self, inpath, outdir=None, verbose=None, **kwargs):
-        if verbose is not None:
-            RKC.verbosity = verbose
+        if verbose:
+            RkCommon.verbosity = verbose
+        if outdir:
+            RkCommon.outdir = pt(outdir)
         super().__init__()
-        self.raw_inp = inpath
-        if outdir is not None:
-            self.outdir = outdir
+        self.raw_inp = pt(inpath)
         self.task = kwargs.get('task')
 
     def done_msg(self):
-        """Gives a final info when all is done."""
-        if self.task == 'exp':
-            if RKC.count['dep_done'] > 0:
-                self.inf(0, f" Done. We unpacked {RKC.count['dep_done']} archive(s).")
+        """Outputs a info when all is done."""
+        if self.task in ['exp', 'sim']:
+            if RkCommon.count['dep_done'] > 0:
+                if self.task == 'exp':
+                    self.inf(0, f" Done. We unpacked {RkCommon.count['dep_done']} "
+                             "archive(s).")
+                else:
+                    self.inf(0, f"We successful simulated the unpacking of"
+                             f" {RkCommon.count['dep_done']} archive(s).")
             else:
                 self.inf(0, f"Oops! No archives where processed...")
-        elif self.task  in ['lst', 'tst']:
+        elif self.task in ['lst', 'tst']:
             self.inf(0, f"Completed!")
 
-    def cfg_control(self):
-        """Processes input, yields depot's to the functions."""
-        if pt(self.raw_inp).is_file():
+    def begin_msg(self):
+        """Outputs a info  about the start state if verbosity is high."""
+        if self.raw_inp.is_file():
             self.inf(2, f"Input is a file. Processing {self.raw_inp}.")
-        elif pt(self.raw_inp).is_dir():
-            self.inf(2, f"Input is a directory. Searching for RPA in {self.raw_inp} " \
+        elif self.raw_inp.is_dir():
+            self.inf(2, f"Input is a directory. Searching for RPA in {self.raw_inp} "
                      "and below.")
 
-        try:
-            self.pathworker()
-        except OSError as err:
-            raise Exception(
-                f"{err}: Error while testing and prepairing input path " \
-                f">{self.raw_inp}< for the main job.")
+    def rk_control(self):
+        """Processes input, yields depot's to the functions."""
+        self.begin_msg()
+        self.pathworker()
 
         while self.dep_lst:
             self.depot = self.dep_lst.pop()
             try:
                 self.init_depot()
             except OSError as err:
-                raise Exception(f"{err}: Error while opening archive file " \
+                raise Exception(f"{err}: Error while opening archive file "
                                 f">{self.depot}< for initialization.")
-
             if self.dep_initstate is False:
                 continue
 
-            if self.task == 'exp':
+            if self.task in ['exp', 'sim']:
                 self.unpack_depot()
             elif self.task == 'lst':
-                self.show_depot_content()
+                self.list_depot_content()
             elif self.task == 'tst':
                 self.test_depot()
 
-            RKC.count['dep_done'] += 1
-            self.inf(1, f"[{RKC.count['dep_done'] / float(RKC.count['dep_found']):05.1%}] {self.strify(self.depot):>4}")
+            RkCommon.count['dep_done'] += 1
+            self.inf(1, f"{self.telltale(RkCommon.count['dep_done'], RkCommon.count['dep_found'], self.depot)}")
             self.clear_rk_vars()
 
+        if self.task in ['exp', 'sim']:
+            self.cleanup()
         self.done_msg()
 
 
 def parse_args():
-    """
-    Argument parser and test for input path to provide functionality for the
-    command line interface.
-    """
-    def check_path(inp):
-        """Helper to check if given path exist."""
-        if pt(inp).exists() and not pt(inp).is_symlink():
-            return inp
-        raise FileNotFoundError(f"Could the given path object ({inp}) not find! " \
-                                "Check the given input.")
-
+    """Argument parser to provide functionality for the command-line interface."""
     def valid_switch():
         """Helper function to determine if a task is choosen."""
         if not args.task:
             aps.print_help()
-            raise argparse.ArgumentError(args.task, f"\nNo task requested; " \
-                                         "either -e, -l or -t is required.")
+            raise argparse.ArgumentError(args.task, f"\nNo task requested; "
+                                         "either -e, -l, -t or -s is required.")
 
     desc = """Program for searching and unpacking RPA files. EXAMPLE USAGE:
     rpakit.py -e -o unpacked /home/{USERNAME}/somedir/search_here
     rpakit.py -t /home/{USERNAME}/otherdir/file.rpa
     rpakit.py -e c:/Users/{USERNAME}/my_folder/A123.rpa"""
     epi = "Standard output dir is set to ´{Target}/rpakit_out/´. Change with option -o."
-    aps = argparse.ArgumentParser(description=desc, epilog=epi, formatter_class=argparse.RawTextHelpFormatter)
+    aps = argparse.ArgumentParser(description=desc,
+                                  epilog=epi,
+                                  formatter_class=argparse.RawTextHelpFormatter)
     aps.add_argument('inpath',
                      metavar='Target',
-                     type=check_path,
-                     help='Directory path to search OR name of a RPA file to unpack.')
+                     action='store',
+                     type=str,
+                     help='Directory path (to search) OR rpa file path to unpack.')
     opts = aps.add_mutually_exclusive_group()
     opts.add_argument('-e', '--expand',
                       dest='task',
@@ -521,8 +563,13 @@ def parse_args():
                       action='store_const',
                       const='tst',
                       help='Tests if archive(s) are a known format.')
+    opts.add_argument('-s', '--simulate',
+                      dest='task',
+                      action='store_const',
+                      const='sim',
+                      help='Unpacks all stored files just temporary.')
     aps.add_argument("-o", "--outdir",
-                     action="store",
+                     action='store',
                      type=str,
                      help="Extracts to the given path instead of standard.")
     aps.add_argument('--verbose',
@@ -538,9 +585,16 @@ def parse_args():
     return args
 
 
+def main(cfg):
+    """This checks if the required Python version runs, instantiates the class,
+    delivers the parameters to its init and executes the program from CLI.
+    """
+    if not sys.version_info[:2] >= (3, 6):
+        raise Exception(f"Must be executed in Python 3.6 or later.\n"
+                        "You are running {}".format(sys.version))
+    rkm = RkMain(cfg.inpath, outdir=cfg.outdir, verbose=cfg.verbose, task=cfg.task)
+    rkm.rk_control()
+
+
 if __name__ == '__main__':
-    assert sys.version_info >= (3, 6), \
-        f"Must be executed in Python 3.6 or later. You are running {sys.version}"
-    CFG = parse_args()
-    RKM = RKmain(CFG.inpath, outdir=CFG.outdir, verbose=CFG.verbose, task=CFG.task)
-    RKM.cfg_control()
+    main(parse_args())
