@@ -84,6 +84,9 @@ class_factory = magic.FakeClassFactory((PyExpr, PyCode, RevertableList, Revertab
 
 printlock = Lock()
 
+# needs class_factory
+import deobfuscate
+
 # API
 
 def read_ast_from_file(in_file):
@@ -107,8 +110,10 @@ def read_ast_from_file(in_file):
     data, stmts = magic.safe_loads(raw_contents, class_factory, {"_ast", "collections"})
     return stmts
 
+
 def decompile_rpyc(input_filename, overwrite=False, dump=False, decompile_python=False,
-                   comparable=False, no_pyexpr=False, translator=None, init_offset=False):
+                   comparable=False, no_pyexpr=False, translator=None, tag_outside_block=False,
+                   init_offset=False, try_harder=False):
     # Output filename is input filename but with .rpy extension
     filepath, ext = path.splitext(input_filename)
     if dump:
@@ -126,7 +131,10 @@ def decompile_rpyc(input_filename, overwrite=False, dump=False, decompile_python
             return False # Don't stop decompiling if one file already exists
 
     with open(input_filename, 'rb') as in_file:
-        ast = read_ast_from_file(in_file)
+        if try_harder:
+            ast = deobfuscate.read_ast(in_file)
+        else:
+            ast = read_ast_from_file(in_file)
 
     with codecs.open(out_filename, 'w', encoding='utf-8') as out_file:
         if dump:
@@ -134,7 +142,8 @@ def decompile_rpyc(input_filename, overwrite=False, dump=False, decompile_python
                                           no_pyexpr=no_pyexpr)
         else:
             decompiler.pprint(out_file, ast, decompile_python=decompile_python, printlock=printlock,
-                                             translator=translator, init_offset=init_offset)
+                                             translator=translator, tag_outside_block=tag_outside_block,
+                                             init_offset=init_offset)
     return True
 
 def extract_translations(input_filename, language):
@@ -161,7 +170,8 @@ def worker(t):
             else:
                 translator = None
             return decompile_rpyc(filename, args.clobber, args.dump, decompile_python=args.decompile_python,
-                                  no_pyexpr=args.no_pyexpr, comparable=args.comparable, translator=translator, init_offset=args.init_offset)
+                                  no_pyexpr=args.no_pyexpr, comparable=args.comparable, translator=translator,
+                                  tag_outside_block=args.tag_outside_block, init_offset=args.init_offset, try_harder=args.try_harder)
     except Exception as e:
         with printlock:
             print("Error while decompiling %s:" % filename)
@@ -207,6 +217,11 @@ def main():
                         "This is useful when comparing dumps from different versions of Ren'Py. "
                         "It should only be used if necessary, since it will cause loss of information such as line numbers.")
 
+    parser.add_argument('--tag-outside-block', dest='tag_outside_block', action='store_true',
+                        help="Always put SL2 'tag's on the same line as 'screen' rather than inside the block. "
+                        "This will break compiling with Ren'Py 7.3 and above, but is needed to get correct line numbers "
+                        "from some files compiled with older Ren'Py versions.")
+
     parser.add_argument('--init-offset', dest='init_offset', action='store_true',
                         help="Attempt to guess when init offset statements were used and insert them. "
                         "This is always safe to enable if the game's Ren'Py version supports init offset statements, "
@@ -215,6 +230,9 @@ def main():
     parser.add_argument('file', type=str, nargs='+',
                         help="The filenames to decompile. "
                         "All .rpyc files in any directories passed or their subdirectories will also be decompiled.")
+
+    parser.add_argument('--try-harder', dest="try_harder", action="store_true",
+                        help="Tries some workarounds against common obfuscation methods. This is a lot slower.")
 
     args = parser.parse_args()
 
