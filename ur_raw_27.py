@@ -18,16 +18,15 @@ import pickle
 import base64
 import textwrap
 
-# NOTE: We need to use os.path to replace the py3 pathlib functionality
-# py3.6 f-strings are not available in py2
-# code from py3 script will need rework with the old % and .format styles
+import _ur_vers
 
 
 __title__ = 'UnRen'
 __license__ = 'Apache-2'
 __author__ = 'F95sam, madeddy'
 __status__ = 'Development'
-__version__ = '0.5.2-alpha'
+# __version__ = 'vers_placeholder'
+__version__ = _ur_vers.__version__
 
 
 # TODO: Placeholder: On completition of the python 3 version the code needs to be

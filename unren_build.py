@@ -20,11 +20,14 @@ Embeds the previously prepaired python script into a Win command file.
 """
 
 
+import _ur_vers
+
+
 __title__ = 'UnRen builder'
 __license__ = 'Apache-2'
 __author__ = 'madeddy'
 __status__ = 'Development'
-__version__ = '0.13.1-alpha'
+__version__ = _ur_vers.__version__
 
 
 import os
@@ -45,11 +48,7 @@ class UrBuild:
     name = 'UnRen builder'
     # config  # hm...absolute or relative paths?
     tools_pth = pt('ur_tools').resolve(strict=True)
-    snipped_pth = pt('ur_embed_rpy').resolve(strict=True)
-    embed_lib = {b'console_placeholder': 'dev_con.rpy',
-                 b'quick_placeholder': 'quick.rpy',
-                 b'rollback_placeholder': 'rollback.rpy',
-                 b'skip_placeholder': 'skip.rpy'}
+    vers_plh = b'vers_placeholder'
 
     raw_py2 = 'ur_raw_27.py'
     raw_py3 = 'ur_raw_36.py'
@@ -136,21 +135,12 @@ class UrBuild:
             raw_py, dst_py = pt(_key), pt(_val)
             self.read_filedata(raw_py)
 
-            for plh, emb in self.embed_dct.items():
-                self.embed_data(plh, emb)
-            self.write_filedata(dst_py, self._tmp)
+            self.emb_in_stream(UrBuild.vers_plh, __version__)
 
     # Step 2: Optional (just for the win cmd)
     def py2cmd(self):
         """Constructs the py stream and embeds it in the cmd file."""
-        batch_plh = b"batch_placeholder"
-        for _key, _val in dict({UrBuild.embed_py2: UrBuild.dst_cmd2,
-                                UrBuild.embed_py3: UrBuild.dst_cmd3}).items():
-            embed_py, dst_cmd = pt(_key), pt(_val)
-            embed_py_stream = self.read_filedata(embed_py)
-            self.read_filedata(UrBuild.base_cmd)
-            self.embed_data(batch_plh, embed_py_stream)
-            self.write_filedata(dst_cmd, self._tmp)
+            self.emb_in_stream(UrBuild.vers_plh, __version__)
 
 
 def parse_args():

@@ -8,6 +8,8 @@ Requirements: python 3.6+
 
 Abbilitys are unpacking rpa files, decompiling rpyc(py2!) files and enabling respectively
 reactivating diverse RenPy functions by script commands.
+
+This app is partly based on the first `unren` from user `Sam` and uses some of the code.
 """
 
 
@@ -18,16 +20,17 @@ from pathlib import Path as pt
 import shutil
 import tempfile
 import textwrap
-import pickle
-import base64
-from colorama import init
+import _ur_vers
 
 
 __title__ = 'UnRen'
 __license__ = 'Apache 2.0'
 __author__ = 'F95sam, madeddy'
 __status__ = 'Development'
-__version__ = '0.12.0-alpha'
+# __version__ = 'vers_placeholder'
+__version__ = _ur_vers.__version__
+
+del _ur_vers
 
 
 class UrP:
