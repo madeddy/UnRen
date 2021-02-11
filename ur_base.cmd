@@ -2,9 +2,9 @@
 """
 @echo off
 rem Name:     UnRen.cmd
-rem Purpose:  One clock tool wrapper for the work on game engine files
+rem Purpose:  One click tool wrapper for the work on game engine files
 rem Author:   github/madeddy
-rem Revision: March 2020 - initial version
+rem Revision: Feb 2021
 
 echo Here is much space for endless speeches
 echo Or not...
@@ -15,34 +15,33 @@ echo Or not...
 rem config
 rem --------------------------------------------------------------------------------
 setlocal enabledelayedexpansion
-set "version=0.12.1-alpha"
+set "version=vers_placeholder"
+rem for /f "skip=1 tokens=2 delims='" %%x in (
+rem	'type _x_vers.py^|find "version"') do set version=%%x
 title "UnRen for Windows v%version%"
 mode con: cols=90 lines=50
 rem set "PYTHONIOENCODING=UTF-8"
 set "base_pth=%~dp0"
 
+rem Python architecture paths
+set "python32dir=%base_pth%lib\windows-i686\"
+set "python64dir=%base_pth%lib\windows-x86_64\"
 
-rem path check
+rem Script loc check
 rem --------------------------------------------------------------------------------
-:path_check
-rem lets assume the ideal (script sits in the games base-dir)
+:init
+rem lets assume the ideal loc (script sits in the games base-dir)
 if exist "game" if exist "lib" if exist "renpy" (
-	goto :py_check
+	goto :arch
 )
 
 rem or if one below we shorten the path
 if exist "..\game" if exist "..\lib" if exist "..\renpy" (
-    for %%X in ("%base_pth:~0,-1%") do set base_pth=%%~dpX
-	goto :py_check
+    for %%X in ("%gameroot:~0,-1%") do set gameroot=%%~dpX
+    goto :arch
 ) else goto :err_path
 
-
-rem py check
-rem --------------------------------------------------------------------------------
-:py_check
-set "python_pth=%base_pth%lib\windows-i686\"
-set "pyexe=%python_pth%python.exe"
-
+:arch
 rem Future: On Renpy 8 (py3) we will have 64bit support for win
 rem if "%processor_architecture%" equ "AMD64" (
 rem     set "python_pth=%base_pth%lib\windows-x86_64\"
@@ -50,7 +49,23 @@ rem ) else (
 rem     set "python_pth=%base_pth%lib\windows-i686\"
 rem )
 
-if not exist "%python_pth%python.exe" (
+if exist python64dir (
+    set "pythondir=%python64dir%"
+    goto :set_paths
+)
+
+if exist python32dir (
+    set "pythondir=%python32dir%"
+    goto :set_paths
+) else goto :err_py
+
+
+rem py check
+rem --------------------------------------------------------------------------------
+:py_check
+set "pyexe=%pythondir%python.exe"
+
+if not exist "%pyexe%" (
 	goto :err_py
 )
 goto :run_py
@@ -70,12 +85,12 @@ rem Missing python error
 rem --------------------------------------------------------------------------------
 :err_py
 echo    ! Error: Cannot locate python.exe, unable to continue.
-echo             Check in directory "%python_pth%" for the executable.
+echo             Check in directory "%pythondir%" for the executable.
 echo/
 goto :term
 
 
-rem Bad end after error
+rem Bad end message after error
 rem --------------------------------------------------------------------------------
 :term
 echo/
@@ -93,10 +108,10 @@ echo on
 exit /b 0
 
 
-rem Kingdom of python --- lets go
+rem Here are the "Kingdom of Python" --- lets go
 rem --------------------------------------------------------------------------------
 :run_py
 rem Works in 7 exit /b !errorlevel!
-"%python_pth%python.exe" -xEO "%~f0" %* & goto :end
+"%pyexe%" -xEO "%~f0" %* & goto :end
 """
 batch_placeholder
