@@ -38,13 +38,42 @@ class UrP:
     shared location at script head."""
 
     _toolstream = """tool_placeholder"""
-    console_code = """console_placeholder
+    console_code = """
+        # ######### Developer menu and console ####
+            config.developer = True
+            config.console = True
     """
-    quick_code = """quick_placeholder
+    quick_code = """
+        # ######### Quick save and load ###########
+            try:
+                config.underlay[0].keymap['quickLoad'] = QuickLoad()
+                config.keymap['quickLoad'] = 'K_F5'
+                config.underlay[0].keymap['quickSave'] = QuickSave()
+                config.keymap['quickSave'] = 'K_F9'
+            except:
+                print("Error: Quicksave/-load not working.")
     """
-    rollback_code = """rollback_placeholder
+    rollback_code = """
+        # ######### Rollback ######################
+            renpy.config.rollback_enabled = True
+            renpy.config.hard_rollback_limit = 256
+            renpy.config.rollback_length = 256
+
+            def unren_noblock( *args, **kwargs ):
+                return
+            renpy.block_rollback = unren_noblock
+
+            try:
+                config.keymap['rollback'] = [ 'K_PAGEUP', 'repeat_K_PAGEUP', 'K_AC_BACK', 'mousedown_4' ]
+            except:
+                print("Error: Rollback not working.")
     """
-    skip_code = """skip_placeholder
+    skip_code = """
+        # ######### Skipping ######################
+            _preferences.skip_unseen = True
+            renpy.game.preferences.skip_unseen = True
+            renpy.config.allow_skipping = True
+            renpy.config.fast_skipping = True
     """
 
 
