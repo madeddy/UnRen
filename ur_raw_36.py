@@ -20,6 +20,9 @@ from pathlib import Path as pt
 import shutil
 import tempfile
 import textwrap
+import atexit
+from time import sleep
+
 import _ur_vers
 
 
@@ -131,6 +134,7 @@ class UnRen(UrP):
         self.ur_tmp_dir = None
         self.rpakit = None
         # self.unrpyc = None  # NOTE: Unneeded till it supports py3
+        atexit.register(self.cleanup)
 
     # FIXME: newline with textwrap... how?
     # test inf functionality some more
@@ -159,6 +163,24 @@ class UnRen(UrP):
             # self.unrpyc = __import__('unrpyc', globals(), locals())
         except ImportError:
             raise ImportError("Unable to import the tools from temp directory.")
+
+    # with context mngr. unstested in py3, doesnt work in 2
+    # @atexit.register
+    def cleanup(self):
+        # TODO: perhaps deleting the tempdir tree without shutil
+        shutil.rmtree(self.ur_tmp_dir)
+        if not pt.isdir(self.ur_tmp_dir):
+            self.inf(1, "Tempdir was successful removed.")
+        else:
+            self.inf(0, "Tempdir {} could not be removed!".format(self.ur_tmp_dir),
+                     m_sort='err')
+
+    def _exit(self):
+        self.inf(0, "Exiting UnRen by user request.")
+        for i in range(3, -1, -1):
+            print(f"{i}%", end='\r')
+            sleep(1)
+        sys.exit(0)
 
     @staticmethod
     def make_rpy_cfg(outfile):
@@ -235,19 +257,8 @@ class UnRen(UrP):
         [item() for item in runall_l]
         self.inf(2, "All requested options finished.")
 
-    def _exit(self):
-        # TODO: perhaps deleting the tempdir tree without shutil
-        shutil.rmtree(self.ur_tmp_dir)
-        if not pt(self.ur_tmp_dir).is_dir():
-            self.inf(1, "Tempdir was successful removed.")
-        else:
-            self.inf(0, f"Tempdir {self.ur_tmp_dir} could not be removed!", m_sort='warn')
-
-        self.inf(0, "Exiting UnRen by user request.")
-        sys.exit(0)
-
     def main_menu(self):
-        """Displays a console text menu and allows choices from the available options."""
+        """Displays a console text menu and allows choices from the available
         while True:
             print(f"\n\n{UnRen.tui_menu_logo}{UnRen.tui_menu_opts}\n\n")
             userinp = input("Type the corresponding key character to the task you want to execute: ").lower()
