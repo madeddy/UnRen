@@ -105,7 +105,7 @@ class UnRen(UrP):
     count = {'rpa_found': 0, 'rpyc_found': 0, 'rpyc_done': 0}
     decomp_lst = []
     # tty color code shorthands
-    std, ul, red, gre, ora, blu, ylw, bblu = '\x1b[0m', '\x1b[03m', '\x1b[31m', '\x1b[32m', '\x1b[33m', '\x1b[34m', '\x1b[93m', '\x1b[44m' if tty_colors else ''
+    std, ul, red, gre, ora, blu, ylw, bblu, bred = '\x1b[0m', '\x1b[03m', '\x1b[31m', '\x1b[32m', '\x1b[33m', '\x1b[34m', '\x1b[93m', '\x1b[44;30m', '\x1b[45;30m' if tty_colors else ''
 
     tui_menu_logo = fr"""
        __  __      ____
@@ -261,7 +261,7 @@ class UnRen(UrP):
     def _exit(self):
         self.inf(0, "Exiting UnRen by user request.")
         for i in range(3, -1, -1):
-            print(f"{i}%", end='\r')
+            print(f"{UnRen.bred}{i}%{UnRen.std}", end='\r')
             sleep(1)
         sys.exit(0)
 
