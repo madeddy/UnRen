@@ -26,10 +26,22 @@ from time import sleep
 
 import _ur_vers
 
+tty_colors = True
+if sys.platform.startswith('win32'):
+    try:
+        from colorama import init
+        init(autoreset=True)
+    except ImportError:
+        tty_colors = False
+
+# FIXME: As the app is standalone we need to replace vers import if main
+# development is done
+# We need a func in ur_build to write the app version in __version__ at build time
+# e.g. __version__ = """vers_placeholder"""
 
 __title__ = 'UnRen'
 __license__ = 'Apache 2.0'
-__author__ = 'F95sam, madeddy'
+__author__ = 'madeddy'
 __status__ = 'Development'
 # __version__ = 'vers_placeholder'
 __version__ = _ur_vers.__version__
@@ -90,7 +102,8 @@ class UnRen(UrP):
 
     name = "UnRen"
     verbosity = 1
-    count = {'rpa_f_found': 0, 'rpyc_f_found': 0}
+    # tty color code shorthands
+    std, ul, red, gre, ora, blu, ylw, bblu = '\x1b[0m', '\x1b[03m', '\x1b[31m', '\x1b[32m', '\x1b[33m', '\x1b[34m', '\x1b[93m', '\x1b[44m' if tty_colors else ''
 
     tui_menu_logo = fr"""
        __  __      ____
@@ -100,29 +113,20 @@ class UnRen(UrP):
     \____/_/ /_/_/ |_|\___/_/ /_/  Version {__version__}
     """
     tui_menu_opts = f"""
-      \x1b[03mAvailable Options:\x1b[0m
+      {ul}Available Options:{std}
 
-      \x1b[34m0\x1b[0m) Extract all RPA packages
-      \x1b[34m1\x1b[0m) Decompile rpyc files
+      {blu}1{std}  Extract all RPA packages
+      {blu}2{std} Decompile rpyc files
 
-      \x1b[32m3\x1b[0m) Enable Console and Developer Menu
-      \x1b[32m4\x1b[0m) Enable Quick Save and Quick Load
-      \x1b[32m5\x1b[0m) Force enable skipping of unseen content
-      \x1b[32m6\x1b[0m) Force enable rollback (scroll wheel)
+      {gre}5{std}  Enable Console and Developer Menu
+      {gre}6{std}  Enable Quick Save and Quick Load
+      {gre}7{std}  Force enable skipping of unseen content
+      {gre}8{std}  Force enable rollback (scroll wheel)
+      {std}s{std}  Options 5 to 8
 
-      \x1b[00ma\x1b[0m) All six options above
-      \x1b[33mx\x1b[0m) Exit this application
+      {ora}x{std}  Exit this application
     """
-    menu_opts = {'0': 'extract',
-                 '1': 'decompile',
-                 # '2': 'unused',
-                 '3': 'console',
-                 '4': 'quick',
-                 '5': 'skip',
-                 '6': 'rollback',
-                 # '7': 'unused',
-                 # '8': 'unused',
-                 # '9': 'unused',
+    menu_opts = {
                  'a': 'all_opts',
                  'x': '_exit'}
 
@@ -143,14 +147,15 @@ class UnRen(UrP):
     def inf(cls, inf_level, msg, m_sort=None):
         """Outputs by the current verboseness level allowed self.infos."""
         if cls.verbosity >= inf_level:  # self.tty ?
-            ind1 = f"{cls.name}:\x1b[32m >> \x1b[0m"
-            ind2 = " " * 10
-            if m_sort == 'note':
-                ind1 = f"{cls.name}:\x1b[93m NOTE \x1b[0m> "
+            if m_sort == 'warn':
+                ind1 = f"{cls.name}:{cls.ylw} WARNING {cls.std}> "
                 ind2 = " " * 13
-            elif m_sort == 'warn':
-                ind1 = f"{cls.name}:\x1b[31m WARNING \x1b[0m> "
+            elif m_sort == 'err':
+                ind1 = f"{cls.name}:{cls.red} ERROR {cls.std}> "
                 ind2 = " " * 17
+            else:
+                ind1 = "{}:{} >> {}".format(cls.name, cls.gre, cls.std)
+                ind2 = " " * 10
             print(textwrap.fill(msg, width=90, initial_indent=ind1,
                                 subsequent_indent=ind2, replace_whitespace=False))
 
@@ -325,7 +330,7 @@ class UnRen(UrP):
                 self.inf(0, "\x1b[42mInvalid\x1b[0m key used. Try again.")
                 continue
             break
-        self.inf(1, f"Input is valid. Continuing with {UnRen.menu_opts[userinp]} ...")
+            self.inf(0, "\x1b[0;30;43mInvalid\x1b[0m key used. Try again.")
 
         meth_call = getattr(self, UnRen.menu_opts[userinp])
         meth_call()
@@ -357,7 +362,6 @@ def ur_main(cfg):
     if not sys.version_info[:2] >= (3, 6):
         raise Exception("Must be executed in Python 3.6 or later.\n"
                         "You are running {}".format(sys.version))
-    init(autoreset=True)
 
     _ur = UnRen(target=cfg.targetpath, verbose=cfg.verbose)
 
