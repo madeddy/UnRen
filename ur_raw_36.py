@@ -103,6 +103,7 @@ class UnRen(UrP):
     name = __title__
     verbosity = 1
     count = {'rpa_found': 0, 'rpyc_found': 0, 'rpyc_done': 0}
+    decomp_lst = []
     # tty color code shorthands
     std, ul, red, gre, ora, blu, ylw, bblu = '\x1b[0m', '\x1b[03m', '\x1b[31m', '\x1b[32m', '\x1b[33m', '\x1b[34m', '\x1b[93m', '\x1b[44m' if tty_colors else ''
 
@@ -287,9 +288,22 @@ class UnRen(UrP):
         """Decompiles RenPy script files."""
         # TODO: reactivate rpyc decompiler if py3 is supported
         self.inf(0, "For now `unrpyc` does not support python 3! Stay tuned for news on this.", m_sort='warn')
-        # if UnRen.count["rpyc_f_found"] == 0:
-        #     self.inf(0, "Could not find any valid target files in the directory tree.", m_sort='note')
-        # unrpyc.decompile_rpyc(self.game_pth)
+
+        # if UnRen.count["rpyc_found"] == 0:
+        #     self.inf(0, "Could not find any valid target files in the directory tree.", m_sort='warn')
+        #     return
+
+        # while True:
+        #     userinp = raw_input("Should already existing rpyc files be overwritten? Type  {}y/n{}: ".format(cls.gre, cls.std)).lower()  # noqa
+        #     if userinp in "yn":
+        #         break
+        # ow = True if userinp == "y" else False
+
+        # for dec_file in self.decomp_lst:
+        #     self.inf(1, f"{self.telltale(UnRen.count['rpyc_done'], UnRen.count['rpyc_found'], dec_file)}")
+        #     self.unrpyc.decompile_rpyc(dec_file, overwrite=ow)
+        #     UnRen.count['rpyc_done'] += 1
+
         # self.inf(2, "Decompling of rpyc files done.")
 
     # WARNING: Never change the placeholder formating/indentation!
