@@ -284,6 +284,9 @@ class UnRen(UrP):
         rkm.rk_control()
         self.inf(2, "Extracting of RPA files done.")
 
+        # we need to call this again after extract to collect new files
+        self.find_valid_files()
+
     def decompile(self):
         """Decompiles RenPy script files."""
         # TODO: reactivate rpyc decompiler if py3 is supported
