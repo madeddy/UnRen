@@ -62,23 +62,12 @@ class UrBuild:
     dst_cmd3 = 'unren_36.cmd'
 
     def __init__(self):
-        self.embed_dct = {}
-        self.tool_lst = []
-        self.toolstream = None
+        self.emb_fl_lst = []
+        self.emb_stream = None
         self._tmp = None
 
-    def read_filedata(self, src_file):
-        """Opens a given file and returns the content as bytes type."""
-        with src_file.open('rb') as ofi:
-            self._tmp = ofi.read()
-            return self._tmp  # needed for cmd_stream
-
-    def embed_data(self, placeholder, embed_data):
-        """Embed's the given data in target datastream."""
-        self._tmp = self._tmp.replace(placeholder, embed_data)
-
     @staticmethod
-    def write_filedata(dst_file, data):
+    def write_outfile(dst_file, data):
         """Writes a new file with given content."""
         with dst_file.open('wb') as ofi:
             ofi.write(data)
@@ -100,11 +89,10 @@ class UrBuild:
             self.embed_dct[plh] = self.read_rpy_cfg(src_rpy)
 
     # Step 1b; pack tools to py
-    def tools_packer(self):
+    def stream_packer(self, plh, src_pth):
         """Packs the tools to a pickled and encoded stream."""
-        plh = b"tool_placeholder"
         store = {}
-        for f_item in self.tool_lst:
+        for f_item in self.emb_fl_lst:
             with pt(f_item).open('rb') as ofi:
                 d_chunk = ofi.read()
 
@@ -116,12 +104,15 @@ class UrBuild:
         self.toolstream = base64.b85encode(pickle.dumps(store))
         self.embed_dct[plh] = self.toolstream
 
-    def path_walker(self):
+    # Step 1a; find tools
+    def path_search(self, search_path):
         """Walks the tools directory and collects a list of py files."""
-        for fpath, _subdirs, files in os.walk(UrBuild.tools_pth):
-            for fln in files:
-                if pt(fln).suffix in ['.py', '.pyc']:
-                    self.tool_lst.append(pt(fpath).joinpath(fln))
+        for entry in search_path.rglob('*.py'):
+    # Step 1: Make py
+    def build_py(self):
+        """Constructs the tools stream and embeds it in the py file."""
+        pydst_dct = {UrBuild.raw_py2: UrBuild.cpl_py2,
+                     UrBuild.raw_py3: UrBuild.cpl_py3}
 
     def embed2py(self):
         """Embeds the rpy cfg snippeds in the py files.
@@ -135,12 +126,13 @@ class UrBuild:
             raw_py, dst_py = pt(_key), pt(_val)
             self.read_filedata(raw_py)
 
-            self.emb_in_stream(UrBuild.vers_plh, __version__)
+            self.write_outfile(cpl_py, self._tmp)
 
-    # Step 2: Optional (just for the win cmd)
-    def py2cmd(self):
+    # Step 2: Make cmd  - optional (just for the win cmd)
+    def build_cmd(self):
         """Constructs the py stream and embeds it in the cmd file."""
-            self.emb_in_stream(UrBuild.vers_plh, __version__)
+        cmddst_dct = {UrBuild.cpl_py2: UrBuild.dst_cmd2,
+            self.write_outfile(dst_cmd, self._tmp)
 
 
 def parse_args():
@@ -159,13 +151,12 @@ def parse_args():
                         dest='task',
                         action='store_const',
                         const='part_1',
-                        help="Executes step 1: embeds the RenPy config snippeds \
-                        and tools into the raw Python scripts.")
-    switch.add_argument('-makecmd',
+                        help="Executes step 1: embeds the tools into the raw Python scripts.")
+    switch.add_argument('-c', '--makecmd',
                         dest='task',
                         action='store_const',
                         const='part_2',
-                        help="Execute step 2: embeds the Python script into the cmd.")
+                        help="Executes step 2: embeds the Python script into the cmd.")
     aps.add_argument('--version',
                      action='version',
                      version=f"%(prog)s : { __title__} {__version__}")
@@ -183,11 +174,11 @@ def build_main(cfg):
     urb = UrBuild()
     # Step 1 embed rpy cfg & tools in the raw py files
     if cfg.task == 'part_1':
-        urb.embed2py()
-        print("\nUnRen builder:>> Embed `snippeds and tools in py` task completed!\n")
+        urb.build_py()
+        print("\nUnRen builder:>> Embed `tools in py` task completed!\n")
     # Step 2 - embed py files in the cmd file
     elif cfg.task == 'part_2':
-        urb.py2cmd()
+        urb.build_cmd()
         print("\nUnRen builder:>> Embed `py in cmd` task completed!\n")
 
 
