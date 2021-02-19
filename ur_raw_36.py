@@ -272,8 +272,8 @@ class UnRen(UrP):
             # RenPy script file
             # Config changes; written by UnRen
 
-            init 999 python:\
-        """
+            init 999 python:
+        """.rstrip()
         with outfile.open('w') as ofi:
             ofi.write(textwrap.dedent(header_txt))
 
@@ -364,7 +364,7 @@ class UnRen(UrP):
             print(f"\n\n{UnRen.tui_menu_logo}{UnRen.tui_menu_opts}\n\n")
             userinp = input(inp_q).lower()
             if userinp in UnRen.menu_opts.keys():
-                self.inf(1, f"Input is valid. Continuing with \
+                self.inf(1, f"Input is valid. Continuing with option \
                     {UnRen.menu_opts[userinp]} ...")
                 break
             self.inf(0, "\x1b[0;30;43mInvalid\x1b[0m key used. Try again.")
