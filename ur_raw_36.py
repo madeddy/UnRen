@@ -172,6 +172,11 @@ class UnRen(UrP):
             print(textwrap.fill(msg, width=90, initial_indent=ind1,
                                 subsequent_indent=ind2, replace_whitespace=False))
 
+    @classmethod
+    def telltale(cls, fraction, total, obj):
+        """Returns a percentage-meter like output for use in tty."""
+        return f"[{cls.bblu}{fraction / float(total):05.1%}{cls.std}] {str(obj):>4}"
+
     def import_tools(self):
         """This runs a deferred import of the tools due to the tools just usable
         after our script runs already."""
@@ -373,7 +378,6 @@ def parse_args():
     """Provides argument parsing functionality on CLI. Obviously."""
     aps = argparse.ArgumentParser(description="A app which provides different functions for the works with RenPy files.", epilog="")
     aps.add_argument('targetpath',
-                     action="store",
                      type=str,
                      help="Base path of the target game to work with.")
     aps.add_argument('--verbose',
