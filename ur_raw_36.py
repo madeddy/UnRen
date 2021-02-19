@@ -129,8 +129,19 @@ class UnRen(UrP):
       {ora}x{std}  Exit this application
     """
     menu_opts = {
-                 'a': 'all_opts',
-                 'x': '_exit'}
+        # '0': 'unused',
+        '1': 'extract',
+        '2': 'decompile',
+        # '3': 'unused',
+        # '4': 'unused',
+        '5': 'console',
+        '6': 'quick',
+        '7': 'skip',
+        '8': 'rollback',
+        # '9': 'unused',
+        's': 'all_snips',
+        'x': '_exit'
+    }
 
     def __init__(self, target='', verbose=None):
         if verbose is not None:
@@ -332,10 +343,10 @@ class UnRen(UrP):
         skip_inf = "Added the abbility to skip all text using TAB and CTRL keys."
         self.write_rpy_cfg(UnRen.skip_code, skip_inf)
 
-    def all_opts(self):
+    def all_snips(self):
         """Runs all available options."""
         runall_l = {getattr(self, val) for key, val in UnRen.menu_opts.items()
-                    if key not in "0x"}
+                    if key in "5678"}
         [item() for item in runall_l]
         self.inf(2, "All requested options finished.")
 
