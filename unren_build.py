@@ -137,17 +137,11 @@ class UrBuild:
 
 def parse_args():
     """Provides argument parsing functionality on CLI. Obviously."""
-    def valid_switch():
-        """Helper function to determine if a task is choosen."""
-        if not args.task:
-            aps.print_help()
-            raise argparse.ArgumentError(args.task, "\nNo task requested; "
-                                         "either -makepy or -makecmd is required.")
     aps = argparse.ArgumentParser(
         description="Helper app to build the release versions of UnRen.",
         epilog="")
-    switch = aps.add_mutually_exclusive_group()
-    switch.add_argument('-makepy',
+    switch = aps.add_mutually_exclusive_group(required=True)
+    switch.add_argument('-p', '--makepy',
                         dest='task',
                         action='store_const',
                         const='part_1',
@@ -161,7 +155,6 @@ def parse_args():
                      action='version',
                      version=f"%(prog)s : { __title__} {__version__}")
     args = aps.parse_args()
-    valid_switch()
     return args
 
 
