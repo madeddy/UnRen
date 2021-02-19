@@ -50,16 +50,14 @@ class UrBuild:
     tools_pth = pt('ur_tools').resolve(strict=True)
     vers_plh = b'vers_placeholder'
 
-    raw_py2 = 'ur_raw_27.py'
-    raw_py3 = 'ur_raw_36.py'
-    embed_py2 = 'ur_embed_27.py'
-    embed_py3 = 'ur_embed_36.py'
+    raw_py2 = pt('ur_raw_27.py').resolve(strict=True)
+    raw_py3 = pt('ur_raw_36.py').resolve(strict=True)
     base_cmd = pt('ur_base.cmd').resolve(strict=True)
 
-    dst_py2 = 'unren_py27.py'
-    dst_py3 = 'unren_py36.py'
-    dst_cmd2 = 'unren_27.cmd'
-    dst_cmd3 = 'unren_36.cmd'
+    cpl_py2 = pt('unren_py27.py').resolve()
+    cpl_py3 = pt('unren_py36.py').resolve()
+    dst_cmd2 = pt('unren_27.cmd').resolve()
+    dst_cmd3 = pt('unren_36.cmd').resolve()
 
     def __init__(self):
         self.emb_fl_lst = []
