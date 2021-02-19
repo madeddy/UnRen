@@ -19,6 +19,11 @@ Step 2:
 Embeds the previously prepaired python script into a Win command file.
 """
 
+import sys
+import argparse
+from base64 import b64encode
+from pickle import dumps
+from pathlib import Path as pt
 
 import _ur_vers
 
@@ -30,14 +35,6 @@ __status__ = 'Development'
 __version__ = _ur_vers.__version__
 
 
-import os
-import sys
-import argparse
-from pathlib import Path as pt
-import pickle
-import base64
-
-
 class UrBuild:
     """
     Constructs from raw base files and different code parts the final
@@ -45,10 +42,12 @@ class UrBuild:
     (Class acts more as wrapper for easier var sharing without global.)
     """
 
-    name = 'UnRen builder'
-    # config  # hm...absolute or relative paths?
+    name = __title__
+
     tools_pth = pt('ur_tools').resolve(strict=True)
+    tool_plh = b'tool_placeholder'
     vers_plh = b'vers_placeholder'
+    batch_plh = b'batch_placeholder'
 
     raw_py2 = pt('ur_raw_27.py').resolve(strict=True)
     raw_py3 = pt('ur_raw_36.py').resolve(strict=True)
@@ -70,21 +69,18 @@ class UrBuild:
         with dst_file.open('wb') as ofi:
             ofi.write(data)
 
-    # Step 1a
-    @staticmethod
-    def read_rpy_cfg(src_rpy):
-        """Reads the RenPy cfg data from a rpy file."""
-        with pt(UrBuild.snipped_pth).joinpath(src_rpy).open('rb') as ofi:
-            pre_lines = [8 * b' ' + line if line != b'\n' else
-                         line for line in ofi.readlines()[4:]]
-            pre_lines[:0] = [b'\n']
-            cfg_txt = b''.join(pre_lines).rstrip()
-        return cfg_txt
+    def embed_vers(self):
+        """Embeds current project version number in dest file."""
+        self.emb_in_stream(UrBuild.vers_plh, __version__.encode())
 
-    def get_rpy_embeds(self):
-        """Gets the cfg text from every listed file and embeds it in the target py."""
-        for plh, src_rpy in UrBuild.embed_lib.items():
-            self.embed_dct[plh] = self.read_rpy_cfg(src_rpy)
+    def emb_in_stream(self, placeholder, embed_data):
+        """Embed's the given data in target datastream."""
+        self._tmp = self._tmp.replace(placeholder, embed_data)
+
+    def read_srcdata(self, src_file):
+        """Opens a given file and returns the content as bytes type."""
+        with src_file.open('rb') as ofi:
+            self._tmp = ofi.read()
 
     # Step 1b; pack tools to py
     def stream_packer(self, plh, src_pth):
@@ -94,42 +90,51 @@ class UrBuild:
             with pt(f_item).open('rb') as ofi:
                 d_chunk = ofi.read()
 
-            rel_fp = pt(f_item).relative_to(UrBuild.tools_pth)
+            rel_fp = pt(f_item).relative_to(src_pth)
             store[str(rel_fp)] = d_chunk
 
-        # NOTE: To reduce size of output a compressor(zlib, lzma...) can be
-        # used between pickle and encoder; At the end it is NOT py-code safe
-        self.toolstream = base64.b85encode(pickle.dumps(store))
-        self.embed_dct[plh] = self.toolstream
+        # To reduce output size a compressor *¹ can be used between pickle and
+        # encoder; As last element it is NOT py-code safe
+        # *¹ Use just a archive type(zlib, bz2...) renpy supports!
+        self.emb_stream = b64encode(dumps(store, 2))
 
     # Step 1a; find tools
     def path_search(self, search_path):
         """Walks the tools directory and collects a list of py files."""
         for entry in search_path.rglob('*.py'):
+            self.emb_fl_lst.append(entry.resolve())
+
     # Step 1: Make py
     def build_py(self):
         """Constructs the tools stream and embeds it in the py file."""
         pydst_dct = {UrBuild.raw_py2: UrBuild.cpl_py2,
                      UrBuild.raw_py3: UrBuild.cpl_py3}
 
-    def embed2py(self):
-        """Embeds the rpy cfg snippeds in the py files.
-        Constructs the tools stream and embeds it in the py file."""
-        self.get_rpy_embeds()  # must be before `tools_packer`
-        self.path_walker()
-        self.tools_packer()
+        self.path_search(UrBuild.tools_pth)
+        self.stream_packer(UrBuild.tool_plh, UrBuild.tools_pth)
 
-        for _key, _val in dict({UrBuild.raw_py2: UrBuild.dst_py2,
-                                UrBuild.raw_py3: UrBuild.dst_py3}).items():
-            raw_py, dst_py = pt(_key), pt(_val)
-            self.read_filedata(raw_py)
+        for raw_py, cpl_py in pydst_dct.items():
+            self.read_srcdata(raw_py)
 
+            self.emb_in_stream(UrBuild.tool_plh, self.emb_stream)
+            self.embed_vers()
             self.write_outfile(cpl_py, self._tmp)
 
     # Step 2: Make cmd  - optional (just for the win cmd)
     def build_cmd(self):
         """Constructs the py stream and embeds it in the cmd file."""
         cmddst_dct = {UrBuild.cpl_py2: UrBuild.dst_cmd2,
+                      UrBuild.cpl_py3: UrBuild.dst_cmd3}
+
+        for cpl_py, dst_cmd in cmddst_dct.items():
+            self.read_srcdata(cpl_py)
+            # The next step is needed because _tmp holds now the src data but
+            # is after overwritten by dst file stream
+            cpl_py_stream = self._tmp
+
+            self.read_srcdata(UrBuild.base_cmd)
+            self.emb_in_stream(UrBuild.batch_plh, cpl_py_stream)
+            self.embed_vers()
             self.write_outfile(dst_cmd, self._tmp)
 
 
