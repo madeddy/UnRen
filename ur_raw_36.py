@@ -95,13 +95,14 @@ class UrP:
 
 class UnRen(UrP):
     """
-    UnRen main class for all the core functionality. Parameters:
+    UnRen main class for all the core functionality. Arguments:
         Positional: {targetpath} takes a `pathlike` or string
         Keyword: {verbose=[0|1|2]} information output level; defaults to 1
     """
 
-    name = "UnRen"
+    name = __title__
     verbosity = 1
+    count = {'rpa_found': 0, 'rpyc_found': 0, 'rpyc_done': 0}
     # tty color code shorthands
     std, ul, red, gre, ora, blu, ylw, bblu = '\x1b[0m', '\x1b[03m', '\x1b[31m', '\x1b[32m', '\x1b[33m', '\x1b[34m', '\x1b[93m', '\x1b[44m' if tty_colors else ''
 
@@ -160,12 +161,13 @@ class UnRen(UrP):
                                 subsequent_indent=ind2, replace_whitespace=False))
 
     def import_tools(self):
-        """This runs a deferred import of the tools due to the tools just usable after our script runs already."""
+        """This runs a deferred import of the tools due to the tools just usable
+        after our script runs already."""
         try:
             sys.path.append(self.ur_tmp_dir)
             self.rpakit = __import__('rpakit', globals(), locals())
 
-            # WARNING: Do not try to import `unrpyc`. py2 only for now!
+            # WARNING: Dont import `unrpyc`. As of Feb'21 still no py3 support!
             # self.unrpyc = __import__('unrpyc', globals(), locals())
         except ImportError:
             raise ImportError("Unable to import the tools from temp directory.")
@@ -274,12 +276,11 @@ class UnRen(UrP):
 
     def extract(self):
         """Extracts content from RenPy archives by use of Rpa Kit."""
-        if UnRen.count["rpa_f_found"] == 0:
-            self.inf(0, "Could not find any valid target files in the directory tree.", m_sort='note')
-
+        if UnRen.count["rpa_found"] == 0:
+            self.inf(0, "Could not find any valid target files in the directory tree.", m_sort='warn')
+            return
         rkm = self.rpakit.RkMain(self.game_pth, task="exp")
         rkm.rk_control()
-        # TODO: assert success
         self.inf(2, "Extracting of RPA files done.")
 
     def decompile(self):
@@ -323,13 +324,16 @@ class UnRen(UrP):
 
     def main_menu(self):
         """Displays a console text menu and allows choices from the available
+        options."""
+        inp_q = "Type the corresponding key character to the task you \
+            want to execute: "
         while True:
             print(f"\n\n{UnRen.tui_menu_logo}{UnRen.tui_menu_opts}\n\n")
-            userinp = input("Type the corresponding key character to the task you want to execute: ").lower()
-            if userinp not in UnRen.menu_opts.keys():
-                self.inf(0, "\x1b[42mInvalid\x1b[0m key used. Try again.")
-                continue
-            break
+            userinp = input(inp_q).lower()
+            if userinp in UnRen.menu_opts.keys():
+                self.inf(1, f"Input is valid. Continuing with \
+                    {UnRen.menu_opts[userinp]} ...")
+                break
             self.inf(0, "\x1b[0;30;43mInvalid\x1b[0m key used. Try again.")
 
         meth_call = getattr(self, UnRen.menu_opts[userinp])
@@ -356,9 +360,7 @@ def parse_args():
 
 
 def ur_main(cfg):
-    """This executes all program steps, validity checks on the args and prints
-    self.infos messages if the default args are used.
-    """
+    """This executes all program steps."""
     if not sys.version_info[:2] >= (3, 6):
         raise Exception("Must be executed in Python 3.6 or later.\n"
                         "You are running {}".format(sys.version))
