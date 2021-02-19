@@ -13,12 +13,13 @@ This app is partly based on the first `unren` from user `Sam` and uses some of t
 """
 
 
-import os
 import sys
 import argparse
 from pathlib import Path as pt
 import shutil
-import tempfile
+from tempfile import mkdtemp
+from pickle import loads
+from base64 import b64decode
 import textwrap
 import atexit
 from time import sleep
@@ -164,6 +165,64 @@ class UnRen(UrP):
         except ImportError:
             raise ImportError("Unable to import the tools from temp directory.")
 
+    def toolstream_handler(self):
+        """Loads and unpacks the stream to usable source state in a tempdir."""
+        store = loads(b64decode(UnRen._toolstream))
+        # store = marshal.loads(base64.b64decode(UnRen._toolstream))
+        # NOTE: tempdir must be deleted by user or stays e.g. shutil.rmtree(pth)
+        self.ur_tmp_dir = mkdtemp(prefix='UnRen.', suffix='.tmp')
+
+        for rel_fp, f_data in store.items():
+            f_pth = pt(self.ur_tmp_dir).joinpath(rel_fp)
+            f_pth.parent.mkdir(parents=True, exist_ok=True)
+
+            with f_pth.open('wb') as ofi:
+                ofi.write(f_data)
+        # control print
+        # return self.ur_tmp_dir
+
+    def path_check(self):
+        """Path work like location checks."""
+        # NOTE: There should be better location checks. And if we use the batch/RenPy
+        # python there must be changes in here
+
+        script_dir = pt(__file__).resolve(strict=True).parent if not self.in_pth \
+            else self.in_pth.resolve(strict=True)
+
+        # control print
+        print(f"script {script_dir}")
+        print(f"cwd {pt.cwd()}")
+
+        # IDEA: Abbility to drag & drop a folder in the terminal and get the path we
+        # work with. e.g
+        # script_dir = given drag&drop input
+
+        if script_dir.joinpath("lib").is_dir() and script_dir.joinpath("renpy").is_dir():
+            self.base_pth = script_dir
+            # control print
+            print("script_dir is base dir")
+        elif script_dir.name == "game" and pt(script_dir).joinpath("cache").is_dir():
+            self.base_pth = script_dir.parent
+            # control print
+            print("script_dir is game dir")
+        else:
+            raise FileNotFoundError(
+                "The given target path is incorrect or Unren is not located in the "
+                f"correct directory! Current dir is: > {script_dir}")
+
+        self.game_pth = self.base_pth.joinpath("game")
+        # control print
+        print(f"script_dir: {script_dir}  base: {self.base_pth}  type: {type(self.base_pth)}  gamepth: {self.game_pth}")
+
+    def find_valid_files(self):
+        """Determines if rpa and rpyc files are present in the gamedir."""
+        for fln in self.game_pth.rglob("*"):
+            if fln.suffix in ('.rpa', '.rpi'):
+                UnRen.count["rpa_found"] += 1
+            elif fln.suffix in ('.rpyc', '.rpymc'):
+                self.decomp_lst.append(fln)
+                UnRen.count["rpyc_found"] += 1
+
     # with context mngr. unstested in py3, doesnt work in 2
     # @atexit.register
     def cleanup(self):
@@ -271,63 +330,6 @@ class UnRen(UrP):
         meth_call = getattr(self, UnRen.menu_opts[userinp])
         meth_call()
         self.main_menu()
-
-    def toolstream_handler(self):
-        """Loads and unpacks the stream to usable source state in a tempdir."""
-
-        store = pickle.loads(base64.b85decode(UnRen._toolstream))
-        # NOTE: tempdir must be deleted by user or stays e.g. shutil.rmtree(pth)
-        self.ur_tmp_dir = tempfile.mkdtemp(prefix='UnRen.', suffix='.tmp')
-
-        for rel_fp, f_data in store.items():
-            f_pth = pt(self.ur_tmp_dir).joinpath(rel_fp)
-            f_pth.parent.mkdir(parents=True, exist_ok=True)
-
-            with f_pth.open('wb') as ofi:
-                ofi.write(f_data)
-        # control print
-        # return self.ur_tmp_dir
-
-    def find_valid_files(self):
-        """Determines if rpa and rpyc files are present in the gamedir."""
-        for fln in self.game_pth.rglob("*"):
-            if fln.suffix in ['.rpa', '.rpi']:
-                UnRen.count["rpa_f_found"] += 1
-            elif fln.suffix in ['.rpyc', '.rpymc']:
-                UnRen.count["rpyc_f_found"] += 1
-
-    def path_check(self):
-        """Path work like location checks."""
-        # NOTE: There should be better location checks. And if we use the batch/RenPy
-        # python there must be changes in here
-
-        script_dir = pt(__file__).resolve(strict=True).parent if not self.in_pth \
-            else self.in_pth.resolve(strict=True)
-
-        # control print
-        print(f"script {script_dir}")
-        print(f"cwd {os.getcwd()}")
-
-        # TODO: Abbility to drag & drop a folder in the terminal and get the path we
-        # work with. e.g
-        # script_dir = given drag&drop input
-
-        if script_dir.joinpath("lib").is_dir() and script_dir.joinpath("renpy").is_dir():
-            self.base_pth = script_dir
-            # control print
-            print(f"script_dir is base dir")
-        elif script_dir.name == "game" and pt(script_dir).joinpath("cache").is_dir():
-            self.base_pth = script_dir.parent
-            # control print
-            print(f"script_dir is game dir")
-        else:
-            raise FileNotFoundError(
-                "The given target path is incorrect or Unren is not located in the "
-                f"correct directory! Current dir is: > {script_dir}")
-        # control print
-        print(f"script_dir: {script_dir}  base: {self.base_pth}  type: {type(self.base_pth)}")
-
-        self.game_pth = self.base_pth.joinpath("game")
 
 
 def parse_args():
