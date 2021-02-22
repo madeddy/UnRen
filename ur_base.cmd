@@ -23,10 +23,6 @@ mode con: cols=90 lines=50
 rem set "PYTHONIOENCODING=UTF-8"
 set "base_pth=%~dp0"
 
-rem Python architecture paths
-set "python32dir=%base_pth%lib\windows-i686\"
-set "python64dir=%base_pth%lib\windows-x86_64\"
-
 rem Script loc check
 rem --------------------------------------------------------------------------------
 :init
@@ -42,6 +38,10 @@ if exist "..\game" if exist "..\lib" if exist "..\renpy" (
 ) else goto :err_path
 
 :arch
+rem Python architecture paths
+set "python32dir=%base_pth%lib\windows-i686\"
+set "python64dir=%base_pth%lib\windows-x86_64\"
+
 rem Future: On Renpy 8 (py3) we will have 64bit support for win
 rem if "%processor_architecture%" equ "AMD64" (
 rem     set "python_pth=%base_pth%lib\windows-x86_64\"
