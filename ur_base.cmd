@@ -37,7 +37,7 @@ if exist "game" if exist "lib" if exist "renpy" (
 
 rem or if one below we shorten the path
 if exist "..\game" if exist "..\lib" if exist "..\renpy" (
-    for %%X in ("%gameroot:~0,-1%") do set gameroot=%%~dpX
+    for %%X in ("%base_pth:~0,-1%") do set base_pth=%%~dpX
     goto :arch
 ) else goto :err_path
 
