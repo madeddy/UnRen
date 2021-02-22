@@ -147,7 +147,6 @@ class UnRen(UrP):
         if verbose is not None:
             UnRen.verbosity = verbose
         self.in_pth = pt(target)
-        self.base_pth = None
         self.game_pth = None
         self.ur_tmp_dir = None
         self.rpakit = None
@@ -222,11 +221,11 @@ class UnRen(UrP):
         # script_dir = given drag&drop input
 
         if script_dir.joinpath("lib").is_dir() and script_dir.joinpath("renpy").is_dir():
-            self.base_pth = script_dir
+            base_pth = script_dir
             # control print
             print("script_dir is base dir")
         elif script_dir.name == "game" and pt(script_dir).joinpath("cache").is_dir():
-            self.base_pth = script_dir.parent
+            base_pth = script_dir.parent
             # control print
             print("script_dir is game dir")
         else:
@@ -234,9 +233,10 @@ class UnRen(UrP):
                 "The given target path is incorrect or Unren is not located in the "
                 f"correct directory! Current dir is: > {script_dir}")
 
-        self.game_pth = self.base_pth.joinpath("game")
+        self.game_pth = base_pth.joinpath("game")
+
         # control print
-        print(f"script_dir: {script_dir}  base: {self.base_pth}  type: {type(self.base_pth)}  gamepth: {self.game_pth}")
+        # print(f"script_dir: {script_dir}  base: {base_pth}  type: {type(base_pth)}  gamepth: {self.game_pth}")
 
     def find_valid_files(self):
         """Determines if rpa and rpyc files are present in the gamedir."""
