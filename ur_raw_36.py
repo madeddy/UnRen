@@ -99,6 +99,7 @@ class UnRen(UrP):
         Positional: {targetpath} takes a `pathlike` or string
         Keyword: {verbose=[0|1|2]} information output level; defaults to 1
     """
+    # TODO IDEA: Maybe we can run this in tkinter window or such
 
     name = __title__
     verbosity = 1
@@ -206,19 +207,17 @@ class UnRen(UrP):
 
     def path_check(self):
         """Path work like location checks."""
-        # NOTE: There should be better location checks. And if we use the batch/RenPy
-        # python there must be changes in here
+        # NOTE: There should be better location checks.
 
+        # Without "in-path" we take the script loc (*1), otherwise the checked
+        # absolute given path
+        # *1 is just for use in batch file
         script_dir = pt(__file__).resolve(strict=True).parent if not self.in_pth \
             else self.in_pth.resolve(strict=True)
 
         # control print
         print(f"script {script_dir}")
         print(f"cwd {pt.cwd()}")
-
-        # IDEA: Abbility to drag & drop a folder in the terminal and get the path we
-        # work with. e.g
-        # script_dir = given drag&drop input
 
         if script_dir.joinpath("lib").is_dir() and script_dir.joinpath("renpy").is_dir():
             base_pth = script_dir
