@@ -49,12 +49,12 @@ rem ) else (
 rem     set "python_pth=%base_pth%lib\windows-i686\"
 rem )
 
-if exist python64dir (
+if exist "%python64dir%" (
     set "pythondir=%python64dir%"
     goto :set_paths
 )
 
-if exist python32dir (
+if exist "%python32dir%" (
     set "pythondir=%python32dir%"
     goto :set_paths
 ) else goto :err_py
