@@ -74,9 +74,10 @@ goto :run_py
 rem Script in wrong location error
 rem --------------------------------------------------------------------------------
 :err_path
-echo    ! Error: The location of UnRen appears to be wrong. It should
-echo             be in the game's root directory.
-echo             (dirs 'game', 'lib', 'renpy' are present)
+echo    ! Error: The location of UnRen appears to be wrong. It should be
+echo             in the game's root directory. 
+echo             e.g. '.../{Here_Your_Games_Name}/'  <- here (directories
+                 'game', 'lib', 'renpy' are present)
 echo/
 goto :term
 
