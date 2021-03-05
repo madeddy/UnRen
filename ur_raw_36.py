@@ -115,7 +115,7 @@ class UnRen(UrP):
       {ul}Available Options:{std}
 
       {blu}1{std}  Extract all RPA packages
-      {blu}2{std} Decompile rpyc files
+      {blu}2{std}  Decompile rpyc files
 
       {gre}5{std}  Enable Console and Developer Menu
       {gre}6{std}  Enable Quick Save and Quick Load
@@ -365,8 +365,8 @@ class UnRen(UrP):
             print(f"\n\n{UnRen.tui_menu_logo}{UnRen.tui_menu_opts}\n\n")
             userinp = input(inp_q).lower()
             if userinp in UnRen.menu_opts.keys():
-                self.inf(1, f"Input is valid. Continuing with option \
-                    {UnRen.menu_opts[userinp]} ...")
+                self.inf(1, "Input is valid. Continuing with option "
+                         f"{UnRen.menu_opts[userinp]} ...")
                 break
             self.inf(0, "\x1b[0;30;43mInvalid\x1b[0m key used. Try again.")
 
