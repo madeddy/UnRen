@@ -3,12 +3,9 @@
 """
 This is a wrapper app around tools for the works with RenPy files. It provides multiple
 functionality through a simple text menu.
-Abbilitys are unpacking RPA, decompiling rpyc and enabling respectively reactivating
-diverse RenPy functions through script commands.
-"""
 
-# pylint: disable=c0301, w0511, w0603
 
+Requirements: python 3.6+
 
 import os
 import sys
@@ -18,15 +15,13 @@ import pickle
 import base64
 import textwrap
 
-import _ur_vers
 
 
 __title__ = 'UnRen'
 __license__ = 'Apache-2'
 __author__ = 'F95sam, madeddy'
 __status__ = 'Development'
-# __version__ = 'vers_placeholder'
-__version__ = _ur_vers.__version__
+__version__ = 'vers_placeholder'
 
 
 # TODO: Placeholder: On completition of the python 3 version the code needs to be
