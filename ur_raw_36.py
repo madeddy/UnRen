@@ -404,7 +404,7 @@ def ur_main(cfg):
     _ur.find_valid_files()
     # control print var assignm. can go
     # ur_tmp_d = _ur.toolstream_handler()
-    _ur.toolstream_handler()
+    _ur.stream_handler()
     _ur.import_tools()
     # # control print testing if tools in temp
     # for item in pt(ur_tmp_d).iterdir():
