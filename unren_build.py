@@ -21,8 +21,8 @@ Embeds the previously prepaired python script into a Win command file.
 
 import sys
 import argparse
-from base64 import b64encode
-from pickle import dumps
+from marshal import dumps
+from binascii import b2a_base64
 from pathlib import Path as pt
 
 import _ur_vers
@@ -93,10 +93,14 @@ class UrBuild:
             rel_fp = pt(f_item).relative_to(src_pth)
             store[str(rel_fp)] = d_chunk
 
+        return self.stream_encoder(store)
+
+    def stream_encoder(self, raw_str):
+        """Packs a raw datastream to a pickled and encoded stream."""
         # To reduce output size a compressor *¹ can be used between pickle and
         # encoder; As last element it is NOT py-code safe
         # *¹ Use just a archive type(zlib, bz2...) renpy supports!
-        self.emb_stream = b64encode(dumps(store, 2))
+        return b2a_base64(dumps(raw_str, 2))
 
     # Step 1a; find tools
     def path_search(self, search_path):

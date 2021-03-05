@@ -18,8 +18,8 @@ import argparse
 from pathlib import Path as pt
 import shutil
 from tempfile import mkdtemp
-from pickle import loads
-from base64 import b64decode
+from marshal import loads
+from binascii import a2b_base64
 import textwrap
 import atexit
 from time import sleep
@@ -182,10 +182,15 @@ class UnRen(UrP):
         except ImportError:
             raise ImportError("Unable to import the tools from temp directory.")
 
-    def toolstream_handler(self):
+    @staticmethod
+    def stream_dec(enc_stream):
+        """Returns given stream decoded, deserialized."""
+        return loads(a2b_base64(enc_stream))
+
+    def stream_handler(self):
         """Loads and unpacks the stream to usable source state in a tempdir."""
-        store = loads(b64decode(UnRen._toolstream))
-        # store = marshal.loads(base64.b64decode(UnRen._toolstream))
+        store = self.stream_dec(UnRen._toolstream)
+
         self.ur_tmp_dir = mkdtemp(prefix='UnRen.', suffix='.tmp')
 
         for rel_fp, f_data in store.items():
