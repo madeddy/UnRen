@@ -197,6 +197,10 @@ class UnRen(UrP):
         store = self.stream_dec(UnRen._toolstream)
 
         self.ur_tmp_dir = mkdtemp(prefix='UnRen.', suffix='.tmp')
+        # _tmp_dir = mkdtemp(prefix='UnRen.', suffix='.tmp')
+        # self.ur_tmp_dir = pt(_tmp_dir).resolve(strict=True)
+        # control print
+        print(f"tmp dir: {self.ur_tmp_dir}")
 
         for rel_fp, f_data in store.items():
             f_pth = pt(self.ur_tmp_dir).joinpath(rel_fp)
@@ -204,8 +208,6 @@ class UnRen(UrP):
 
             with f_pth.open('wb') as ofi:
                 ofi.write(f_data)
-        # control print
-        # return self.ur_tmp_dir
 
     def path_check(self):
         """Path work like location checks."""
@@ -252,7 +254,7 @@ class UnRen(UrP):
     def cleanup(self):
         # TODO: perhaps deleting the tempdir tree without shutil
         shutil.rmtree(self.ur_tmp_dir)
-        if not pt.isdir(self.ur_tmp_dir):
+        if not pt(self.ur_tmp_dir).exists():
             self.inf(1, "Tempdir was successful removed.")
         else:
             self.inf(0, "Tempdir {} could not be removed!".format(self.ur_tmp_dir),
