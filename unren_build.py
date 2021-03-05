@@ -39,7 +39,7 @@ class UrBuild:
     """
     Constructs from raw base files and different code parts the final
     executable scripts.
-    (Class acts more as wrapper for easier var sharing without global.)
+    (Class acts rather as wrapper for easier var sharing without global.)
     """
 
     name = __title__
@@ -91,8 +91,8 @@ class UrBuild:
             self._tmp = ofi.read()
 
     # Step 1b; pack tools to py
-    def stream_packer(self, plh, src_pth):
-        """Packs the tools to a pickled and encoded stream."""
+    def stream_packer(self, src_pth):
+        """Collects tool files in a variable and passes it in the encoder."""
         store = {}
         for f_item in self.emb_fl_lst:
             with pt(f_item).open('rb') as ofi:
@@ -118,14 +118,17 @@ class UrBuild:
 
     # Step 1: Make py
     def build_py(self):
-        """Constructs the tools stream and embeds it in the py file."""
+        """Constructs a stream and embeds the tools and other data in it.
+        Writes the complete stream then as new py file."""
         pydst_dct = {UrBuild.raw_py2: UrBuild.cpl_py2,
                      UrBuild.raw_py3: UrBuild.cpl_py3}
 
+        # shared steps before different targets are opened
         self.path_search(UrBuild.tools_pth)
         tool_stream = self.stream_packer(UrBuild.tools_pth)
         logo_stream = self.stream_encoder(UrBuild.ur_logo)
 
+        # we loop over the different src/dst version pairs with the same steps
         for raw_py, cpl_py in pydst_dct.items():
             self.read_srcdata(raw_py)
             self.emb_in_stream(UrBuild.tool_plh, tool_stream)
