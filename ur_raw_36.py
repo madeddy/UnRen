@@ -24,7 +24,6 @@ import textwrap
 import atexit
 from time import sleep
 
-import _ur_vers
 
 tty_colors = True
 if sys.platform.startswith('win32'):
@@ -34,19 +33,12 @@ if sys.platform.startswith('win32'):
     except ImportError:
         tty_colors = False
 
-# FIXME: As the app is standalone we need to replace vers import if main
-# development is done
-# We need a func in ur_build to write the app version in __version__ at build time
-# e.g. __version__ = """vers_placeholder"""
 
 __title__ = 'UnRen'
 __license__ = 'Apache 2.0'
 __author__ = 'madeddy'
 __status__ = 'Development'
-# __version__ = 'vers_placeholder'
-__version__ = _ur_vers.__version__
-
-del _ur_vers
+__version__ = 'vers_placeholder'
 
 
 class UrP:
