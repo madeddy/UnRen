@@ -45,6 +45,7 @@ class UrP:
     """This class exists so we can hold all the placeholder/embed vars in a
     shared location at script head."""
 
+    # WARNING: Never change the placeholder formating/indentation!
     _toolstream = """tool_placeholder"""
     console_code = """
         # ######### Developer menu and console ####
@@ -185,7 +186,6 @@ class UnRen(UrP):
         """Loads and unpacks the stream to usable source state in a tempdir."""
         store = loads(b64decode(UnRen._toolstream))
         # store = marshal.loads(base64.b64decode(UnRen._toolstream))
-        # NOTE: tempdir must be deleted by user or stays e.g. shutil.rmtree(pth)
         self.ur_tmp_dir = mkdtemp(prefix='UnRen.', suffix='.tmp')
 
         for rel_fp, f_data in store.items():
@@ -201,9 +201,8 @@ class UnRen(UrP):
         """Path work like location checks."""
         # NOTE: There should be better location checks.
 
-        # Without "in-path" we take the script loc (*1), otherwise the checked
-        # absolute given path
-        # *1 is just for use in batch file
+        # Without "in-path" we take the script loc, otherwise the given path
+        # from CLI arg
         script_dir = pt(__file__).resolve(strict=True).parent if not self.in_pth \
             else self.in_pth.resolve(strict=True)
 
@@ -238,7 +237,7 @@ class UnRen(UrP):
                 self.decomp_lst.append(fln)
                 UnRen.count["rpyc_found"] += 1
 
-    # with context mngr. unstested in py3, doesnt work in 2
+    # untested with context mngr. in py3, doesnt work in 2
     # @atexit.register
     def cleanup(self):
         # TODO: perhaps deleting the tempdir tree without shutil
@@ -316,7 +315,6 @@ class UnRen(UrP):
 
         # self.inf(2, "Decompling of rpyc files done.")
 
-    # WARNING: Never change the placeholder formating/indentation!
     def console(self):
         """Enables the RenPy console and developer menu."""
         console_inf = "Added access to developer menu and debug console with the \
@@ -401,7 +399,7 @@ def ur_main(cfg):
     #     print(item)
     _ur.main_menu()
 
-    print("\nMain function completed! This should not happen.\n")
+    print("\nMain function was irregular completed! This should not happen.\n")
 
 
 if __name__ == '__main__':
