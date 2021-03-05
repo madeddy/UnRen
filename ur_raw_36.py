@@ -359,11 +359,9 @@ class UnRen(UrP):
     def main_menu(self):
         """Displays a console text menu and allows choices from the available
         options."""
-        inp_q = "Type the corresponding key character to the task you \
-            want to execute: "
         while True:
-            print(f"\n\n{UnRen.tui_menu_logo}{UnRen.tui_menu_opts}\n\n")
-            userinp = input(inp_q).lower()
+            print("\n", UnRen.tui_menu_logo, f"Version {__version__}\n", UnRen.tui_menu_opts, "\nType at the prompt the corresponding key character to the task you want to execute.")
+            userinp = input("Task: ").lower()
             if userinp in UnRen.menu_opts.keys():
                 self.inf(1, "Input is valid. Continuing with option "
                          f"{UnRen.menu_opts[userinp]} ...")
