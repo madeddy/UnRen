@@ -67,7 +67,7 @@ class UrBuild:
     dst_cmd3 = pt('unren_36.cmd').resolve()
 
     def __init__(self):
-        self.emb_fl_lst = []
+        self.tool_fl_lst = []
         self.emb_stream = None
         self._tmp = None
 
@@ -94,7 +94,7 @@ class UrBuild:
     def stream_packer(self, src_pth):
         """Collects tool files in a variable and passes it in the encoder."""
         store = {}
-        for f_item in self.emb_fl_lst:
+        for f_item in self.tool_fl_lst:
             with pt(f_item).open('rb') as ofi:
                 d_chunk = ofi.read()
 
@@ -114,7 +114,7 @@ class UrBuild:
     def path_search(self, search_path):
         """Walks the tools directory and collects a list of py files."""
         for entry in search_path.rglob('*.py'):
-            self.emb_fl_lst.append(entry.resolve())
+            self.tool_fl_lst.append(entry.resolve())
 
     # Step 1: Make py
     def build_py(self):
