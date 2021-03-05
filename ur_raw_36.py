@@ -47,6 +47,8 @@ class UrP:
 
     # WARNING: Never change the placeholder formating/indentation!
     _toolstream = """tool_placeholder"""
+    _tuilogo_enc = """ur_logo_placeholder"""
+
     console_code = """
         # ######### Developer menu and console ####
             config.developer = True
@@ -101,13 +103,14 @@ class UnRen(UrP):
     # tty color code shorthands
     std, ul, red, gre, ora, blu, ylw, bblu, bred = '\x1b[0m', '\x1b[03m', '\x1b[31m', '\x1b[32m', '\x1b[33m', '\x1b[34m', '\x1b[93m', '\x1b[44;30m', '\x1b[45;30m' if tty_colors else ''
 
-    tui_menu_logo = fr"""
-       __  __      ____
-      / / / /___  / __ \___  ____
-     / / / / __ \/ /_/ / _ \/ __ \
-    / /_/ / / / / _, _/  __/ / / /
-    \____/_/ /_/_/ |_|\___/_/ /_/  Version {__version__}
-    """
+    tui_menu_logo = None
+    # tui_menu_logo = fr"""
+    #    __  __        ____                  ___
+    #   / / / /____   / __ \ ___   ____     |__ \
+    #  / / / // __ \ / /_/ // _ \ / __ \    __/ /
+    # / /_/ // / / // _, _//  __// / / /   / __/
+    # \____//_/ /_//_/ |_| \___//_/ /_/   /____/  Version {__version__}
+    # """
     tui_menu_opts = f"""
       {ul}Available Options:{std}
 
@@ -189,6 +192,8 @@ class UnRen(UrP):
 
     def stream_handler(self):
         """Loads and unpacks the stream to usable source state in a tempdir."""
+        # store = loads(b64decode(UnRen._toolstream))
+        UnRen.tui_menu_logo = self.stream_dec(UrP._tuilogo_enc)
         store = self.stream_dec(UnRen._toolstream)
 
         self.ur_tmp_dir = mkdtemp(prefix='UnRen.', suffix='.tmp')

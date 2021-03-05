@@ -47,7 +47,15 @@ class UrBuild:
     tools_pth = pt('ur_tools').resolve(strict=True)
     tool_plh = b'tool_placeholder'
     vers_plh = b'vers_placeholder'
+    logo_plh = b'ur_logo_placeholder'
     batch_plh = b'batch_placeholder'
+
+    ur_logo = r"""
+       __  __        ____                  ___
+      / / / /____   / __ \ ___   ____     |__ \
+     / / / // __ \ / /_/ // _ \ / __ \    __/ /
+    / /_/ // / / // _, _//  __// / / /   / __/
+    \____//_/ /_//_/ |_| \___//_/ /_/   /____/  """
 
     raw_py2 = pt('ur_raw_27.py').resolve(strict=True)
     raw_py3 = pt('ur_raw_36.py').resolve(strict=True)
@@ -115,12 +123,13 @@ class UrBuild:
                      UrBuild.raw_py3: UrBuild.cpl_py3}
 
         self.path_search(UrBuild.tools_pth)
-        self.stream_packer(UrBuild.tool_plh, UrBuild.tools_pth)
+        tool_stream = self.stream_packer(UrBuild.tools_pth)
+        logo_stream = self.stream_encoder(UrBuild.ur_logo)
 
         for raw_py, cpl_py in pydst_dct.items():
             self.read_srcdata(raw_py)
-
-            self.emb_in_stream(UrBuild.tool_plh, self.emb_stream)
+            self.emb_in_stream(UrBuild.tool_plh, tool_stream)
+            self.emb_in_stream(UrBuild.logo_plh, logo_stream)
             self.embed_vers()
             self.write_outfile(cpl_py, self._tmp)
 
