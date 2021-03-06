@@ -61,10 +61,10 @@ class UrBuild:
     raw_py3 = pt('ur_raw_36.py').resolve(strict=True)
     base_cmd = pt('ur_base.cmd').resolve(strict=True)
 
-    cpl_py2 = pt('unren_py27.py').resolve()
-    cpl_py3 = pt('unren_py36.py').resolve()
-    dst_cmd2 = pt('unren_27.cmd').resolve()
-    dst_cmd3 = pt('unren_36.cmd').resolve()
+    cpl_py2 = pt('unren_py27.py')
+    cpl_py3 = pt('unren_py36.py')
+    dst_cmd2 = pt('unren_27.cmd')
+    dst_cmd3 = pt('unren_36.cmd')
 
     def __init__(self):
         self.tool_fl_lst = []
@@ -74,7 +74,8 @@ class UrBuild:
     @staticmethod
     def write_outfile(dst_file, data):
         """Writes a new file with given content."""
-        with dst_file.open('wb') as ofi:
+        out_pt = pt('operable').joinpath(dst_file).resolve()
+        with out_pt.open('wb') as ofi:
             ofi.write(data)
 
     def embed_vers(self):
